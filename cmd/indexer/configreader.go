@@ -24,7 +24,9 @@ func ConfigCollections() []ConfigCollection {
 
 	var collections []ConfigCollection
 
-	json.Unmarshal(content, &collections)
+	if err := json.Unmarshal(content, &collections); err != nil {
+		log.Fatalln(err.Error())
+	}
 
 	return collections
 }
