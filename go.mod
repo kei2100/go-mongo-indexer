@@ -1,4 +1,4 @@
-module github.com/idnan/go-mongo-indexer
+module github.com/kei2100/go-mongo-indexer
 
 go 1.13
 
