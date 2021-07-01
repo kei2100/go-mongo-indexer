@@ -68,7 +68,6 @@ func CreateIndex(collection string, indexName string, indexModel IndexModel) boo
 
 	keys := indexModel.Keys
 	background := true
-	languageOverride := "search_lang"
 
 	_unique, exists := keys["_unique"]
 	if !exists {
@@ -90,7 +89,6 @@ func CreateIndex(collection string, indexName string, indexModel IndexModel) boo
 		Unique:           &unique,
 		Background:       &background,
 		Name:             &indexName,
-		LanguageOverride: &languageOverride,
 	}
 	expireAfterSeconds := int32(_expireAfterSeconds)
 	if expireAfterSeconds > 0 {
