@@ -68,7 +68,8 @@ The configuration file is just a simple json file containing the indexes to be a
                 "key": [
                     { "orderId": 1 }
                 ],
-                "unique": true // creates a `unique index`
+                "unique": true, // creates a `unique index`
+                "sparse": true  // creates a `sparse index`
             },                       
             {
                 "key": [
