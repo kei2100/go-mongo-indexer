@@ -1,4 +1,4 @@
-module github.com/kei2100/go-mongo-indexer
+module github.com/kei2100/go-mongo-indexer/v2
 
 go 1.13
 

@@ -13,7 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/kei2100/go-mongo-indexer/pkg/util"
+	"github.com/kei2100/go-mongo-indexer/v2/pkg/util"
 )
 
 const GB1 = 1000000000
