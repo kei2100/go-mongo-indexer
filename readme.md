@@ -6,6 +6,12 @@
 [![Build Status](https://travis-ci.org/idnan/go-mongo-indexer.svg?branch=master)](https://travis-ci.org/idnan/go-mongo-indexer)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gohugoio/hugo)](https://goreportcard.com/report/github.com/gohugoio/hugo)
 
+## Installation
+
+```shell
+go install github.com/kei2100/go-mongo-indexer/v2/cmd/indexer@latest
+```
+
 ## Usage
 
 ```shell
