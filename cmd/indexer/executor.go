@@ -281,15 +281,13 @@ func GenerateIndexName(indexColumns interface{}) string {
 	return hex.EncodeToString(algorithm.Sum(nil))
 }
 
-// Return list of database collections
+// Return list of config collections
 func Collections() []string {
-	collections, err := db.ListCollectionNames(context.TODO(), bson.M{})
-
-	if err != nil {
-		log.Fatalln(err.Error())
+	var cols []string
+	for _, cc := range ConfigCollections() {
+		cols = append(cols, cc.Collection)
 	}
-
-	return collections
+	return cols
 }
 
 // Return database collection indexes
