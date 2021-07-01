@@ -79,6 +79,7 @@ func CreateIndex(collection string, indexName string, indexModel IndexModel) boo
 		Background:         &background,
 		Name:               &indexName,
 		ExpireAfterSeconds: indexModel.ExpireAfterSeconds,
+		Sparse:             &indexModel.Sparse,
 	}
 
 	index := mongo.IndexModel{
@@ -249,6 +250,7 @@ func getIndexesDiff() *IndexDiff {
 					Key:                givenIndex.Key,
 					Unique:             givenIndex.Unique,
 					ExpireAfterSeconds: givenIndex.ExpireAfterSeconds,
+					Sparse: givenIndex.Sparse,
 				}
 			}
 		}
@@ -309,9 +311,9 @@ func DbIndexes(collection string) []IndexModel {
 		}
 
 		// check if there's a unique index or not
-		_, exists := src["unique"]
+		unique, exists := src["unique"]
 		if exists {
-			dst.Unique = true
+			dst.Unique = unique.(bool)
 		}
 
 		// check if there's a unique index or not
@@ -319,6 +321,12 @@ func DbIndexes(collection string) []IndexModel {
 		if exists {
 			v := expireAfterSeconds.(int32)
 			dst.ExpireAfterSeconds = &v
+		}
+
+		// check if there's a sparse index or not
+		sparse, exists := src["sparse"]
+		if exists {
+			dst.Sparse = sparse.(bool)
 		}
 
 		dst.Name = src["name"].(string)
