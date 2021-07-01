@@ -52,12 +52,12 @@ func applyDiff(indexDiff *IndexDiff) {
 		}
 
 		for _, index := range indexesToRemove {
-			util.PrintRed(fmt.Sprintf("- Dropping index %s: %s\n", index.Name, util.JsonEncode(index.Keys)))
+			util.PrintRed(fmt.Sprintf("- Dropping index %s: %s\n", index.Name, util.JsonEncode(index)))
 			DropIndex(collection, index.Name)
 		}
 
 		for _, index := range indexesToAdd {
-			util.PrintGreen(fmt.Sprintf("+ Adding index %s: %s\n", index.Name, util.JsonEncode(index.Keys)))
+			util.PrintGreen(fmt.Sprintf("+ Adding index %s: %s\n", index.Name, util.JsonEncode(index)))
 			CreateIndex(collection, index.Name, index)
 		}
 	}
@@ -65,39 +65,21 @@ func applyDiff(indexDiff *IndexDiff) {
 
 // Create index of on the given collection with index Name and columns
 func CreateIndex(collection string, indexName string, indexModel IndexModel) bool {
-
-	keys := indexModel.Keys
+	var keys bson.D
+	for _, m := range indexModel.Key {
+		for k, v := range m {
+			keys = append(keys, bson.E{Key: k, Value: v})
+		}
+	}
 	background := true
-
-	_unique, exists := keys["_unique"]
-	if !exists {
-		_unique = 0
-	}
-
-	unique := false
-	if _unique == 1 {
-		unique = true
-	}
-
-	_expireAfterSeconds, exists := keys["_expireAfterSeconds"]
-	if !exists {
-		_expireAfterSeconds = 0
-	}
 
 	// setting options
 	opts := &options.IndexOptions{
-		Unique:           &unique,
-		Background:       &background,
-		Name:             &indexName,
+		Unique:             &indexModel.Unique,
+		Background:         &background,
+		Name:               &indexName,
+		ExpireAfterSeconds: indexModel.ExpireAfterSeconds,
 	}
-	expireAfterSeconds := int32(_expireAfterSeconds)
-	if expireAfterSeconds > 0 {
-		opts.ExpireAfterSeconds = &expireAfterSeconds
-	}
-
-	// remove the non index fields
-	delete(keys, "_unique")
-	delete(keys, "_expireAfterSeconds")
 
 	index := mongo.IndexModel{
 		Keys:    keys,
@@ -109,7 +91,7 @@ func CreateIndex(collection string, indexName string, indexModel IndexModel) boo
 	_, err := indexView.CreateOne(context.TODO(), index)
 
 	if err != nil {
-		log.Fatalln(err.Error())
+		log.Fatalf("create index: %+v", err.Error())
 	}
 
 	return true
@@ -121,7 +103,7 @@ func DropIndex(collection string, indexName string) bool {
 	_, err := indexes.DropOne(context.TODO(), indexName)
 
 	if err != nil {
-		log.Fatalln(err.Error())
+		log.Fatalf("drop index: %+v", err.Error())
 	}
 
 	return true
@@ -148,11 +130,11 @@ func showDiff(indexDiff *IndexDiff) {
 		}
 
 		for _, index := range indexesToRemove {
-			util.PrintRed(fmt.Sprintf("- %s: %s\n", index.Name, util.JsonEncode(index.Keys)))
+			util.PrintRed(fmt.Sprintf("- %s: %s\n", index.Name, util.JsonEncode(index)))
 		}
 
 		for _, index := range indexesToAdd {
-			util.PrintGreen(fmt.Sprintf("+ %s: %s\n", index.Name, util.JsonEncode(index.Keys)))
+			util.PrintGreen(fmt.Sprintf("+ %s: %s\n", index.Name, util.JsonEncode(index)))
 		}
 	}
 }
@@ -168,14 +150,14 @@ func getIndexesDiff() *IndexDiff {
 
 	for _, collection := range Collections() {
 
-		var alreadyAppliedIndexesColumns []interface{}
+		var alreadyAppliedIndexes []IndexModel
 		var alreadyAppliedIndexesNames []string
-		var givenIndexes []map[string]int
+		var givenIndexes []*ConfigIndex
 
 		configCollection := GetConfigCollection(collection)
 
 		if configCollection != nil {
-			givenIndexes = configCollection.Indexes
+			givenIndexes = configCollection.Index
 		}
 
 		// Get current database collection indexes
@@ -208,10 +190,10 @@ func getIndexesDiff() *IndexDiff {
 
 			isCurrentIndexInConfig := false
 
-			for _, givenIndexColumns := range givenIndexes {
+			for _, givenIndex := range givenIndexes {
 
 				// If the Name of index matches the Name of given index
-				generatedIndexName := GenerateIndexName(givenIndexColumns)
+				generatedIndexName := GenerateIndexName(givenIndex)
 
 				if dbIndex.Name == generatedIndexName {
 					isCurrentIndexInConfig = true
@@ -220,7 +202,7 @@ func getIndexesDiff() *IndexDiff {
 				}
 
 				// First check if this column group has the index
-				if reflect.DeepEqual(givenIndexColumns, dbIndex.Keys) {
+				if dbIndex.Compare(givenIndex) {
 					isCurrentIndexInConfig = true
 					break
 				}
@@ -232,27 +214,27 @@ func getIndexesDiff() *IndexDiff {
 				}
 				oldIndexes[collection][dbIndex.Name] = dbIndex
 			} else {
-				alreadyAppliedIndexesColumns = append(alreadyAppliedIndexesColumns, dbIndex.Keys)
+				alreadyAppliedIndexes = append(alreadyAppliedIndexes, dbIndex)
 			}
 		}
 
 		// For each of the given indexes, check if it is already applied or not
 		// If not, prepare a list so that those can be applied
-		for _, givenIndexColumns := range givenIndexes {
+		for _, givenIndex := range givenIndexes {
 
 			isAlreadyApplied := false
 
 			// If the Name of index matches the Name of given index
-			generatedIndexName := GenerateIndexName(givenIndexColumns)
+			generatedIndexName := GenerateIndexName(givenIndex)
 
-			for _, appliedIndexColumns := range alreadyAppliedIndexesColumns {
+			for _, appliedIndex := range alreadyAppliedIndexes {
 
 				if util.StringInSlice(generatedIndexName, alreadyAppliedIndexesNames) {
 					isAlreadyApplied = true
 					break
 				}
 
-				if reflect.DeepEqual(givenIndexColumns, appliedIndexColumns) {
+				if appliedIndex.Compare(givenIndex) {
 					isAlreadyApplied = true
 					break
 				}
@@ -262,7 +244,12 @@ func getIndexesDiff() *IndexDiff {
 				if newIndexes[collection] == nil {
 					newIndexes[collection] = make(map[string]IndexModel)
 				}
-				newIndexes[collection][generatedIndexName] = IndexModel{generatedIndexName, givenIndexColumns}
+				newIndexes[collection][generatedIndexName] = IndexModel{
+					Name:               generatedIndexName,
+					Key:                givenIndex.Key,
+					Unique:             givenIndex.Unique,
+					ExpireAfterSeconds: givenIndex.ExpireAfterSeconds,
+				}
 			}
 		}
 	}
@@ -299,38 +286,44 @@ func DbIndexes(collection string) []IndexModel {
 	dbIndexes := make([]IndexModel, 0)
 
 	for cursor.Next(context.TODO()) {
+		src := bson.M{}
+		var dst IndexModel
 
-		index := bson.M{}
-		if err := cursor.Decode(&index); err != nil {
+		if err := cursor.Decode(&src); err != nil {
 			log.Fatalln(err.Error())
 		}
 
-		keys := map[string]int{}
-		keysByte, _ := bson.Marshal(index["key"])
+		var keys bson.D
+		keysByte, _ := bson.Marshal(src["key"])
 		if err := bson.Unmarshal(keysByte, &keys); err != nil {
-			log.Fatalln(err)
+			log.Fatalf("unmarshal bson key: %v", err)
 		}
-
 		// ignore the _id index as it's the default index
-		if len(keys) == 0 || reflect.DeepEqual(keys, map[string]int{"_id": 1}) {
+		if len(keys) == 0 || reflect.DeepEqual(keys, bson.D{{Key: "_id", Value: int32(1)}}) {
 			continue
 		}
-
-		// check if there's a unique index or not
-		_, exists := index["unique"]
-		if exists {
-			keys["_unique"] = 1
+		for _, k := range keys {
+			dst.Key = append(dst.Key, map[string]int32{
+				k.Key: k.Value.(int32),
+			})
 		}
 
 		// check if there's a unique index or not
-		expireAfterSeconds, exists := index["expireAfterSeconds"]
+		_, exists := src["unique"]
 		if exists {
-			keys["_expireAfterSeconds"] = int(expireAfterSeconds.(int32))
+			dst.Unique = true
 		}
 
-		name := index["name"].(string)
+		// check if there's a unique index or not
+		expireAfterSeconds, exists := src["expireAfterSeconds"]
+		if exists {
+			v := expireAfterSeconds.(int32)
+			dst.ExpireAfterSeconds = &v
+		}
 
-		dbIndexes = append(dbIndexes, IndexModel{name, keys})
+		dst.Name = src["name"].(string)
+
+		dbIndexes = append(dbIndexes, dst)
 	}
 
 	return dbIndexes

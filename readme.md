@@ -9,10 +9,10 @@
 ## Usage
 
 ```shell
-indexer --config <index-config-file> 
-        --uri <mongodb-connection-uri>
-        --database <database name>
-        --apply
+indexer -config <index-config-file> 
+        -uri <mongodb-connection-uri>
+        -database <database name>
+        -apply
 ```
 
 Details of options is listed below
@@ -34,24 +34,48 @@ The configuration file is just a simple json file containing the indexes to be a
         "collection": "order",     // name of collection
         "cap": null,               // Number of bytes 
         "index": [                 // Array of index details
-            {"cartId": 1},         // An ascending order index
-            {"status": -1},        // Descending order index
-            {"orderId": 1},
-            {"groupId": 1},
-            {"currency": 1},
-            {"createdAt": -1},
-            {"orderNumber": 1, "type": 1},  // Composite index on orderNumber and type
-            {"type": -1, "paymentStatus": -1, "payment.paymentMethod": -1}
+            {
+                "key": [
+                    { "cartId": 1 }   // An ascending order index
+                ]
+            },
+            {
+                "key": [
+                    { "status": -1 } // Descending order index
+                ]
+            },
+            {
+                "key":[
+                    // Composite index on orderNumber and type
+                    { "orderNumber": 1 },
+                    { "type": 1 }
+                ]
+            },  
+            {
+                "key": [
+                    { "type": -1 }, 
+                    { "paymentStatus": -1 }, 
+                    { "payment.paymentMethod": -1 }
+                ]
+            }
         ]
     },
     {
         "collection": "collection_name",
         "cap": null,
         "index": [
-            {"userId": -1},
-            {"username": 1},
-            {"orderId": 1, "_unique": 1},                       // creates a `unique index`
-            {"createdAt": -1, "_expireAfterSeconds": 500}       // creates a `expires index` that will delete document after given number of seconds 
+            {
+                "key": [
+                    { "orderId": 1 }
+                ],
+                "unique": 1 // creates a `unique index`
+            },                       
+            {
+                "key": [
+                    { "createdAt": -1 }
+                ], 
+                "_expireAfterSeconds": 500 // creates a `expires index` that will delete document after given number of seconds 
+            }       
         ]
     }
     ....
