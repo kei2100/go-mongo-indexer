@@ -1,9 +1,19 @@
 package main
 
+import (
+	"reflect"
+)
+
 type ConfigCollection struct {
-	Collection string           `json:"collection"`
-	CapSize    int              `json:"cap"`
-	Indexes    []map[string]int `json:"index"`
+	Collection string         `json:"collection"`
+	CapSize    int            `json:"cap"`
+	Index      []*ConfigIndex `json:"index"`
+}
+
+type ConfigIndex struct {
+	Key                []map[string]int32 `json:"key"`
+	Unique             bool               `json:"unique"`
+	ExpireAfterSeconds *int32             `json:"expireAfterSeconds,omitempty"`
 }
 
 type IndexDiff struct {
@@ -13,6 +23,14 @@ type IndexDiff struct {
 }
 
 type IndexModel struct {
-	Name string
-	Keys map[string]int
+	Name               string             `json:"name"`
+	Key                []map[string]int32 `json:"key"`
+	Unique             bool               `json:"unique"`
+	ExpireAfterSeconds *int32             `json:"expireAfterSeconds"`
+}
+
+func (m *IndexModel) Compare(index *ConfigIndex) bool {
+	return reflect.DeepEqual(m.Key, index.Key) &&
+		m.Unique == index.Unique &&
+		reflect.DeepEqual(m.ExpireAfterSeconds, index.ExpireAfterSeconds)
 }
