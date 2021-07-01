@@ -91,7 +91,7 @@ The configuration file is just a simple json file containing the indexes to be a
 > See list of index changes before applying
 
 ```shell
-indexer --config "/path/to/xyz.json" --uri "mongodb://127.0.0.1:27017/database_name" --database "database_name"
+indexer -config "/path/to/xyz.json" -uri "mongodb://127.0.0.1:27017/database_name" -database "database_name"
 ```
 
 <p align="center">
@@ -100,7 +100,7 @@ indexer --config "/path/to/xyz.json" --uri "mongodb://127.0.0.1:27017/database_n
 
 > Apply the index changes
 ```shell
-$ indexer --config "/path/to/xyz.json" --uri "mongodb://127.0.0.1:27017/database_name"  --database "database_name" --apply
+$ indexer -config "/path/to/xyz.json" -uri "mongodb://127.0.0.1:27017/database_name"  -database "database_name" --apply
 ```
 
 ## Todo
