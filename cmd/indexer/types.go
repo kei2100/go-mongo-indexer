@@ -14,6 +14,7 @@ type ConfigIndex struct {
 	Key                []map[string]int32 `json:"key"`
 	Unique             bool               `json:"unique"`
 	ExpireAfterSeconds *int32             `json:"expireAfterSeconds,omitempty"`
+	Sparse             bool               `json:"sparse"`
 }
 
 type IndexDiff struct {
@@ -27,10 +28,12 @@ type IndexModel struct {
 	Key                []map[string]int32 `json:"key"`
 	Unique             bool               `json:"unique"`
 	ExpireAfterSeconds *int32             `json:"expireAfterSeconds"`
+	Sparse             bool               `json:"sparse"`
 }
 
 func (m *IndexModel) Compare(index *ConfigIndex) bool {
 	return reflect.DeepEqual(m.Key, index.Key) &&
 		m.Unique == index.Unique &&
-		reflect.DeepEqual(m.ExpireAfterSeconds, index.ExpireAfterSeconds)
+		reflect.DeepEqual(m.ExpireAfterSeconds, index.ExpireAfterSeconds) &&
+		m.Sparse == index.Sparse
 }
