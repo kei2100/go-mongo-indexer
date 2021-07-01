@@ -68,13 +68,13 @@ The configuration file is just a simple json file containing the indexes to be a
                 "key": [
                     { "orderId": 1 }
                 ],
-                "unique": 1 // creates a `unique index`
+                "unique": true // creates a `unique index`
             },                       
             {
                 "key": [
                     { "createdAt": -1 }
                 ], 
-                "_expireAfterSeconds": 500 // creates a `expires index` that will delete document after given number of seconds 
+                "expireAfterSeconds": 500 // creates a `expires index` that will delete document after given number of seconds 
             }       
         ]
     }
