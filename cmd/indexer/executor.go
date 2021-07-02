@@ -250,7 +250,7 @@ func getIndexesDiff() *IndexDiff {
 					Key:                givenIndex.Key,
 					Unique:             givenIndex.Unique,
 					ExpireAfterSeconds: givenIndex.ExpireAfterSeconds,
-					Sparse: givenIndex.Sparse,
+					Sparse:             givenIndex.Sparse,
 				}
 			}
 		}
@@ -344,16 +344,28 @@ func IsCollectionToIndex(collection string) bool {
 
 // Check if the collection is already capped
 func IsCollectionCaped(collection string) bool {
+	if !IsDatabaseExists() {
+		return false
+	}
 
 	command := map[string]string{"collStats": collection}
 	result := db.RunCommand(context.TODO(), command)
 
 	var doc bson.M
 	if err := result.Decode(&doc); err != nil {
-		log.Fatalln(err.Error())
+		log.Fatalf("get collStats: %v", err.Error())
 	}
 
 	return doc["capped"].(bool)
+}
+
+// Check if tha database exists
+func IsDatabaseExists() bool {
+	result, err := db.Client().ListDatabases(context.TODO(), bson.M{"name": *database})
+	if err != nil {
+		log.Fatalf("list database: %v", err.Error())
+	}
+	return len(result.Databases) > 0
 }
 
 func SetCapSize(collection string, size int) bool {
