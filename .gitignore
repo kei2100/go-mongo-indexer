@@ -26,4 +26,4 @@
 .glide/
 .docker_build/
 profile.cov
-dist
+dist/
