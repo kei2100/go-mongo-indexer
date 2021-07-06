@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -312,7 +313,16 @@ func DbIndexes(collection string) []IndexModel {
 			case "unique":
 				dst.Unique = s.Value.(bool)
 			case "expireAfterSeconds":
-				v := s.Value.(int32)
+				var v int32
+				switch sv := s.Value.(type) {
+				case int32:
+					v = sv
+				case int64:
+					if sv > int64(math.MaxInt32) {
+						log.Fatalf("unpexpected expireAfterSeconds %d (must be <= MaxInt32) [%s.%s] %v", sv, db.Name(), collection, src)
+					}
+					v = int32(sv)
+				}
 				dst.ExpireAfterSeconds = &v
 			case "sparse":
 				dst.Sparse = s.Value.(bool)
