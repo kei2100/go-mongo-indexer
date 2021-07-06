@@ -347,15 +347,15 @@ func IsCollectionCaped(collection string) bool {
 	if !IsDatabaseExists() {
 		return false
 	}
-	if !IsCollectionExists(collection) {
-		return false
-	}
 
 	command := map[string]string{"collStats": collection}
 	result := db.RunCommand(context.TODO(), command)
 
 	var doc bson.M
 	if err := result.Decode(&doc); err != nil {
+		if IsErrCollectionNotFound(err, db.Name(), collection) {
+			return false
+		}
 		log.Fatalf("get collStats: %v", err.Error())
 	}
 
@@ -371,12 +371,14 @@ func IsDatabaseExists() bool {
 	return len(result) > 0
 }
 
-func IsCollectionExists(collection string) bool {
-	result, err := db.ListCollectionNames(context.TODO(), bson.M{"name": collection})
-	if err != nil {
-		log.Fatalf("list collection names: %v", err.Error())
+func IsErrCollectionNotFound(err error, dbName, collectionName string) bool {
+	if err == nil {
+		return false
 	}
-	return len(result) > 0
+	if err.Error() == fmt.Sprintf("Collection [%s.%s] not found.", dbName, collectionName) {
+		return true
+	}
+	return false
 }
 
 func SetCapSize(collection string, size int) bool {
