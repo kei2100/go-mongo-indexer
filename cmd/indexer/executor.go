@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"reflect"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -288,49 +287,41 @@ func DbIndexes(collection string) []IndexModel {
 	dbIndexes := make([]IndexModel, 0)
 
 	for cursor.Next(context.TODO()) {
-		src := bson.M{}
+		src := bson.D{}
 		var dst IndexModel
 
 		if err := cursor.Decode(&src); err != nil {
 			log.Fatalln(err.Error())
 		}
 
-		var keys bson.D
-		keysByte, _ := bson.Marshal(src["key"])
-		if err := bson.Unmarshal(keysByte, &keys); err != nil {
-			log.Fatalf("unmarshal bson key: %v", err)
+		for _, s := range src {
+			switch s.Key {
+			case "name":
+				dst.Name = s.Value.(string)
+			case "key":
+				var keys bson.D
+				keysByte, _ := bson.Marshal(s.Value)
+				if err := bson.Unmarshal(keysByte, &keys); err != nil {
+					log.Fatalf("unmarshal bson key: %v", err)
+				}
+				for _, k := range keys {
+					dst.Key = append(dst.Key, map[string]int32{
+						k.Key: k.Value.(int32),
+					})
+				}
+			case "unique":
+				dst.Unique = s.Value.(bool)
+			case "expireAfterSeconds":
+				v := s.Value.(int32)
+				dst.ExpireAfterSeconds = &v
+			case "sparse":
+				dst.Sparse = s.Value.(bool)
+			}
 		}
-		// ignore the _id index as it's the default index
-		if len(keys) == 0 || reflect.DeepEqual(keys, bson.D{{Key: "_id", Value: int32(1)}}) {
+		// ignore the _id_ index as it's the default index
+		if dst.Name == "_id_" {
 			continue
 		}
-		for _, k := range keys {
-			dst.Key = append(dst.Key, map[string]int32{
-				k.Key: k.Value.(int32),
-			})
-		}
-
-		// check if there's a unique index or not
-		unique, exists := src["unique"]
-		if exists {
-			dst.Unique = unique.(bool)
-		}
-
-		// check if there's a unique index or not
-		expireAfterSeconds, exists := src["expireAfterSeconds"]
-		if exists {
-			v := expireAfterSeconds.(int32)
-			dst.ExpireAfterSeconds = &v
-		}
-
-		// check if there's a sparse index or not
-		sparse, exists := src["sparse"]
-		if exists {
-			dst.Sparse = sparse.(bool)
-		}
-
-		dst.Name = src["name"].(string)
-
 		dbIndexes = append(dbIndexes, dst)
 	}
 
